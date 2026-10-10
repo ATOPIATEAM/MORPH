@@ -4,7 +4,6 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Daily ledger</title>
-<link rel="icon" type="image/svg+xml" href="morph-ledger-icon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
@@ -104,6 +103,19 @@ textarea{min-height:72px;resize:vertical}
 .cfg h3{font-stretch:75%;font-weight:800;font-size:20px;margin:22px 0 6px;border-top:2px solid var(--ink);padding-top:14px}
 .cfg p{font-size:14px;color:var(--steel)}
 @media(prefers-reduced-motion:no-preference){.lod .fill{transition:width .7s cubic-bezier(.2,.7,.2,1)}}
+
+.subhead{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;width:100%;text-align:left;background:none;border:0;padding:6px 0;cursor:pointer;min-height:52px}
+.subhead:hover .nm strong{text-decoration:underline}
+.subhead .chev{display:grid;place-items:center;width:28px;height:28px;border:2px solid var(--ink);font-weight:900;line-height:1}
+.subhead .nm strong{font-stretch:75%;font-weight:800;font-size:20px}
+.subhead .nm small{color:var(--steel);font-weight:600}
+.subhead .st{display:block;font-size:13px;color:var(--steel);font-weight:600}
+.subhead .st.warn{color:#A8311A;font-weight:800}
+.subhead .pts{white-space:nowrap;color:var(--steel);font-weight:600}
+.subhead .pts b{font-stretch:62%;font-weight:900;font-size:30px;color:var(--ink)}
+.meter.thin{height:8px;margin:4px 0 6px}
+.subbody{padding:6px 0 0 40px}
+.subbody[hidden]{display:none}
 
 </style>
 </head>
@@ -372,9 +384,9 @@ textarea{min-height:72px;resize:vertical}
   }
   function load() { try { const s = JSON.parse(localStorage.getItem(SKEY)); if (s && s.v === 1) { s.log = s.log || {}; s.labels = s.labels || {}; s.competitors = s.competitors || {}; COMPS.forEach(n => s.competitors[n] = s.competitors[n] || {}); s.books = s.books || []; s.timer = s.timer || { key: today(), acc: 0, since: null }; return s; } } catch (e) {} return emptyState(); }
   let state = load();
-  const ui = { page: 'habits', prodTab: 'overview', drafts: {}, modal: null, settings: false, sync: { status: 'off', msg: 'Sync off' }, wait: null };
-  try { const u = JSON.parse(localStorage.getItem(UKEY)); if (u) { ui.page = u.page || ui.page; ui.prodTab = u.prodTab || ui.prodTab; } } catch (e) {}
-  const saveUI = () => { try { localStorage.setItem(UKEY, JSON.stringify({ page: ui.page, prodTab: ui.prodTab })); } catch (e) {} };
+  const ui = { page: 'habits', prodTab: 'overview', open: {}, drafts: {}, modal: null, settings: false, sync: { status: 'off', msg: 'Sync off' }, wait: null };
+  try { const u = JSON.parse(localStorage.getItem(UKEY)); if (u) { ui.page = u.page || ui.page; ui.prodTab = u.prodTab || ui.prodTab; ui.open = u.open || {}; } } catch (e) {}
+  const saveUI = () => { try { localStorage.setItem(UKEY, JSON.stringify({ page: ui.page, prodTab: ui.prodTab, open: ui.open })); } catch (e) {} };
   const save = () => { try { localStorage.setItem(SKEY, JSON.stringify(state)); } catch (e) {} };
   const dayLog = k => (state.log[k] = state.log[k] || {});
   const touch = () => { state.updatedAt = Date.now(); save(); scheduleSync(); };
@@ -475,16 +487,22 @@ textarea{min-height:72px;resize:vertical}
     return out.length ? `<p class="hist">${out.join('<br>')}</p>` : '';
   }
   function subRow(sec, sub, D) {
-    const t = D.today.prod[sub.id], pct = clamp(t.projected / sub.cap * 100, 0, 100), dr = D.draft || {};
+    const t = D.today.prod[sub.id], pct = clamp(t.projected / sub.cap * 100, 0, 100);
     const d = ui.drafts[sub.id] || { rating: '', note: '' };
-    let status;
-    if (t.valid) status = `<p class="note">Added today: ${t.entry.rating}/100 for +${f2(t.gain)}. ${esc(t.entry.note)}</p>`;
-    else status = `<p class="note ${t.warn ? 'warn' : ''}">${t.dry} day${t.dry === 1 ? '' : 's'} without an entry. ${t.warn ? `Add one today or lose ${CFG.penalty} at midnight.` : `Loses ${CFG.penalty} per day once it reaches ${sec.dry}.`}</p>`;
+    const open = !!ui.open[sub.id];
+    let chip, cls = '', body;
+    if (t.valid) { chip = 'Added today'; body = `<p class="note">Added today: ${t.entry.rating}/100 for +${f2(t.gain)}. ${esc(t.entry.note)}</p>`; }
+    else {
+      chip = t.warn ? `Add today or lose ${CFG.penalty}` : `${t.dry} day${t.dry === 1 ? '' : 's'} without an entry`;
+      cls = t.warn ? 'warn' : '';
+      body = `<p class="note ${cls}">${t.dry} day${t.dry === 1 ? '' : 's'} without an entry. ${t.warn ? `Add one today or lose ${CFG.penalty} at midnight.` : `Loses ${CFG.penalty} per day once it reaches ${sec.dry}.`}</p>`;
+    }
     const pv = d.rating ? '+' + f2(clamp(Number(d.rating) || 0, 0, 100) * CFG.entryMax / 100) : '+0.00';
     const form = t.valid ? '' : `<div class="pair"><div><label class="f" for="r-${sub.id}">Today\u2019s rating (1 to 100)</label><input id="r-${sub.id}" type="number" min="1" max="100" inputmode="numeric" data-draft="${sub.id}" data-f="rating" value="${esc(d.rating)}"></div>
       <div><label class="f" for="n-${sub.id}">What I did or learned</label><input id="n-${sub.id}" data-draft="${sub.id}" data-f="note" value="${esc(d.note)}"></div></div>
       <p><button class="btn" data-act="prod-add" data-s="${sub.id}">Add entry (<span id="pv-${sub.id}">${pv}</span>)</button></p>`;
-    return `<div class="sub"><h3>${esc(SUBN[sub.id])}<span>x${sub.mult}</span></h3><div class="score" style="margin-top:6px"><b style="font-size:38px">${fmt(t.projected)}</b><span>of ${sub.cap}</span><em>${Math.round(pct)}%</em></div><div class="meter"><i style="width:${pct}%"></i></div>${status}${form}${subHistory(sub.id)}</div>`;
+    return `<div class="sub"><button class="subhead" data-act="sub-toggle" data-s="${sub.id}" aria-expanded="${open}" aria-controls="sp-${sub.id}"><span class="chev" aria-hidden="true">${open ? '\u2212' : '+'}</span><span class="nm"><strong>${esc(SUBN[sub.id])}</strong> <small>x${sub.mult}</small><span class="st ${cls}">${esc(chip)}</span></span><span class="pts"><b>${fmt(t.projected)}</b> / ${sub.cap}</span></button>
+      <div class="meter thin"><i style="width:${pct}%"></i></div><div class="subbody" id="sp-${sub.id}" ${open ? '' : 'hidden'}>${body}${form}${subHistory(sub.id)}</div></div>`;
   }
 
   function prodPage(D, k) {
@@ -499,7 +517,7 @@ textarea{min-height:72px;resize:vertical}
     } else {
       const sec = CFG.sections.find(s => s.id === ui.prodTab);
       const warn = sec.split && !D.today.prod[sec.id + '_any'] ? `<p class="note warn">No ${SECN[sec.id].toLowerCase()} entry yet today. Midnight takes ${f2(CFG.penalty / sec.subs.length)} from every sub-section.</p>` : '';
-      body = `<div class="big-n"><b>${fmt(D.liveScores[sec.id])}</b><span class="note">out of 100, weighted by each sub-section\u2019s multiplier</span></div>${warn}${sec.subs.map(s => subRow(sec, s, D)).join('')}`;
+      body = `<div class="big-n"><b>${fmt(D.liveScores[sec.id])}</b><span class="note">out of 100, weighted by each sub-section\u2019s multiplier</span></div>${warn}<p><button class="btn" data-act="sub-all" data-v="1">Expand all</button> <button class="btn" data-act="sub-all" data-v="0">Collapse all</button></p>${sec.subs.map(s => subRow(sec, s, D)).join('')}`;
     }
     return `<h1 class="title">Production</h1><div class="subtabs">${tabs.map(t => `<button class="btn ${ui.prodTab === t[0] ? 'on' : ''}" data-act="ptab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div>${body}`;
   }
@@ -594,6 +612,8 @@ textarea{min-height:72px;resize:vertical}
     if (a === 'veil-s') { if (e.target === el) closeSettings(); return; }
     if (el.tagName === 'A') e.preventDefault();
     if (a === 'page') { ui.page = el.dataset.p; saveUI(); render(); window.scrollTo(0, 0); }
+    else if (a === 'sub-toggle') { const id = el.dataset.s; if (ui.open[id]) delete ui.open[id]; else ui.open[id] = true; saveUI(); render(); }
+    else if (a === 'sub-all') { const sec = CFG.sections.find(s => s.id === ui.prodTab); sec.subs.forEach(s => { if (el.dataset.v === '1') ui.open[s.id] = true; else delete ui.open[s.id]; }); saveUI(); render(); }
     else if (a === 'ptab') { ui.prodTab = el.dataset.t; saveUI(); render(); }
     else if (a === 'h') {
       const hl = (dayLog(k).habits = dayLog(k).habits || {}), id = el.dataset.h;
@@ -618,7 +638,7 @@ textarea{min-height:72px;resize:vertical}
       const pl = (dayLog(k).prod = dayLog(k).prod || {});
       if (pl[id]) return;
       pl[id] = { rating: r, note, at: Date.now() };
-      delete ui.drafts[id]; touch(); render();
+      delete ui.drafts[id]; delete ui.open[id]; saveUI(); touch(); render();
     } else if (a === 'timer') {
       const now = Date.now(), t = state.timer;
       if (t.since) { t.acc += now - t.since; t.since = null; commitTimer(now); } else { t.since = now; lastCommit = now; }
@@ -729,6 +749,7 @@ textarea{min-height:72px;resize:vertical}
       let ok = false;
       for (let i = 0; i < 3 && !ok; i++) {
         const r = await ghGet(g);
+        if (r.data && r.data.v !== 1) throw new Error('That file holds other data, not this site\u2019s. Change the file path in Settings.');
         if (r.data) state = merge(state, r.data);
         save();
         const mine = payload();
