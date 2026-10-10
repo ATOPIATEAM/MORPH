@@ -1,0 +1,751 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Daily ledger</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#E7EBED;--field:#F4F6F7;--ink:#12171A;--steel:#56636B;--soft:#CFD6DA;--b1:#E5482A;--b2:#F08A24;--b3:#F0C419;--b4:#2E9E5B;--b1t:#F3C3B8;--b2t:#F6D7AF;--b3t:#F5E7A6;--b4t:#B6DBC4}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.5 'Archivo',system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;font-variant-numeric:tabular-nums}
+button,input,textarea,select{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--b2);outline-offset:2px}
+.wrap{max-width:820px;margin:0 auto;padding:0 18px 80px}
+.top{position:sticky;top:0;z-index:5;background:var(--paper);border-bottom:3px solid var(--ink);display:flex;align-items:flex-end;justify-content:space-between;gap:10px;padding-top:10px}
+.tabs{display:flex;gap:2px;flex-wrap:wrap}
+.tab{border:0;background:none;cursor:pointer;font-stretch:75%;font-weight:800;font-size:22px;letter-spacing:.01em;padding:8px 14px 10px;color:var(--steel);border-bottom:6px solid transparent;margin-bottom:-3px;min-height:44px}
+.tab.on{color:var(--ink);border-bottom-color:var(--ink)}
+.tools{display:flex;gap:6px;align-items:center;padding-bottom:8px}
+.chip{border:2px solid var(--ink);background:var(--field);padding:4px 10px;font-size:13px;font-weight:600;border-radius:2px;cursor:pointer;min-height:36px}
+.chip i{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--steel);margin-right:6px}
+.chip.ok i{background:var(--b4)}.chip.busy i{background:var(--b3)}.chip.err i{background:var(--b1)}
+h1.title{font-stretch:62%;font-weight:900;font-size:clamp(46px,11vw,84px);line-height:.92;margin:26px 0 6px;letter-spacing:-.01em}
+.dateline{display:flex;justify-content:space-between;color:var(--steel);font-weight:600;margin-bottom:22px}
+.row{border-top:3px solid var(--ink);padding:20px 0 24px}
+.row.locked{background:repeating-linear-gradient(135deg,var(--soft) 0 7px,var(--paper) 7px 14px);color:var(--steel);padding:16px 12px}
+.row h2{font-stretch:75%;font-weight:800;font-size:27px;line-height:1.05;margin:0 0 10px}
+.row h2 .idx{display:inline-block;min-width:1.4em;color:var(--steel)}
+.row h2 .to{color:var(--steel);font-weight:600}
+.hgrid{display:grid;gap:20px}
+@media(min-width:720px){.hgrid{grid-template-columns:1.1fr 1fr;gap:34px}}
+.score{display:flex;align-items:baseline;gap:8px}
+.score b{font-stretch:62%;font-weight:900;font-size:60px;line-height:1}
+.score span{color:var(--steel);font-weight:600}
+.score em{margin-left:auto;font-style:normal;font-weight:700}
+.meter{height:12px;background:var(--soft);margin:8px 0 14px;position:relative}
+.meter>i{display:block;height:100%;background:var(--ink)}
+.btn{border:2px solid var(--ink);background:var(--field);padding:10px 16px;font-weight:700;border-radius:2px;cursor:pointer;min-height:46px;text-align:left}
+.btn:hover:not(:disabled){background:var(--ink);color:var(--paper)}
+.btn.on{background:var(--ink);color:var(--paper)}
+.btn:disabled{opacity:.38;cursor:not-allowed}
+.btn.big{width:100%;font-size:18px;padding:14px 16px}
+.btn small{display:block;font-weight:500;opacity:.8}
+.stack{display:grid;gap:8px}
+.note{color:var(--steel);font-size:14px;margin:8px 0 0}
+.warn{color:#A8311A;font-weight:700}
+label.f{display:block;font-weight:700;font-size:14px;margin:12px 0 4px}
+input,textarea,select{border:2px solid var(--ink);background:var(--field);padding:8px 10px;border-radius:2px;min-height:44px;width:100%}
+textarea{min-height:72px;resize:vertical}
+.pair{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.side h3{font-stretch:75%;font-weight:800;font-size:18px;margin:0 0 6px}
+.book{border-top:2px solid var(--ink);padding:10px 0}
+.book.done{opacity:.55}
+.dots{display:flex;gap:6px;margin:6px 0}
+.dot{width:26px;height:26px;border:2px solid var(--ink);display:grid;place-items:center;font-size:12px;font-weight:700}
+.dot.clean{background:var(--b4);}.dot.ex{background:var(--b3)}.dot.act{background:var(--b1)}.dot.none{background:transparent}
+.subtabs{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 6px}
+.subtabs .btn{padding:6px 12px;min-height:40px}
+.stat{border-top:3px solid var(--ink);padding:16px 0 18px}
+.stat h2{font-stretch:75%;font-weight:800;font-size:27px;margin:0 0 8px}
+.cmp{display:grid;grid-template-columns:130px 1fr 74px;gap:10px;align-items:center;margin:4px 0}
+.cmp .meter{margin:0;height:14px}
+.cmp.you .meter>i{background:var(--b2)}
+.cmp.you b{font-size:20px}
+.cmp input{min-height:36px;padding:4px 8px;text-align:right}
+.who{font-weight:700;font-size:14px}
+.sub{border-top:2px solid var(--ink);padding:14px 0 16px}
+.sub h3{margin:0;font-size:19px;font-stretch:75%;font-weight:800;display:flex;gap:10px;align-items:baseline}
+.sub h3 span{color:var(--steel);font-size:14px;font-weight:600}
+.sub .hist{font-size:13px;color:var(--steel);margin:8px 0 0}
+.lod{position:relative;height:76px;border:3px solid var(--ink);background:var(--paper);margin:18px 0 6px;overflow:hidden}
+.lod .fill{position:absolute;inset:0 auto 0 0}
+.lod .fill.b1{background:var(--b1)}.lod .fill.b2{background:var(--b2)}.lod .fill.b3{background:var(--b3)}.lod .fill.b4{background:var(--b4)}
+.lod .mk{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--ink);opacity:.4}
+.ticks{position:relative;height:22px;font-size:12px;font-weight:700;color:var(--steel)}
+.ticks span{position:absolute;transform:translateX(-50%)}
+.ticks span:first-child{transform:none}.ticks span:last-child{transform:translateX(-100%)}
+.big-n{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.big-n b{font-stretch:62%;font-weight:900;font-size:clamp(60px,14vw,110px);line-height:.9}
+.timer{border-top:3px solid var(--ink);margin-top:22px;padding:18px 0;display:grid;gap:12px}
+@media(min-width:620px){.timer{grid-template-columns:auto 1fr auto;align-items:center;gap:26px}}
+.clock{font-stretch:62%;font-weight:900;font-size:56px;line-height:1}
+.status{font-weight:700}
+.status.ok{color:#1D7A44}.status.no{color:#A8311A}
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:6px}
+.tile{aspect-ratio:1;display:flex;flex-direction:column;justify-content:space-between;padding:14px;border:3px solid var(--ink);background:var(--field);cursor:pointer;text-align:left;border-radius:2px}
+.tile svg{width:58%;height:auto;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.tile span{font-stretch:75%;font-weight:800;font-size:19px;line-height:1.05}
+.tile:hover{background:var(--ink);color:var(--paper)}
+.veil{position:fixed;inset:0;background:rgba(18,23,26,.74);display:grid;place-items:end center;z-index:20}
+@media(min-width:720px){.veil{place-items:center}}
+.sheet{background:var(--paper);border-top:6px solid var(--ink);width:min(660px,100%);max-height:92vh;overflow:auto;padding:24px 22px 28px}
+.sheet h2{font-stretch:62%;font-weight:900;font-size:44px;line-height:.95;margin:0 0 14px}
+.sheet p{margin:0 0 12px;font-size:18px;max-width:60ch}
+.sheet .x{float:right}
+.badge{display:inline-block;border:2px solid var(--ink);padding:3px 10px;font-weight:700;font-size:14px;margin-bottom:14px}
+.badge.ok{background:var(--b4t)}.badge.no{background:var(--b1t)}
+.waitbox{border:2px solid var(--ink);padding:12px;margin-top:10px;display:flex;gap:14px;align-items:center}
+.waitbox b{font-stretch:62%;font-weight:900;font-size:40px}
+.cfg h3{font-stretch:75%;font-weight:800;font-size:20px;margin:22px 0 6px;border-top:2px solid var(--ink);padding-top:14px}
+.cfg p{font-size:14px;color:var(--steel)}
+@media(prefers-reduced-motion:no-preference){.lod .fill{transition:width .7s cubic-bezier(.2,.7,.2,1)}}
+
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+'use strict';
+(function (root) {
+  const MIN = 60000;
+  const CFG = {
+    habitMax: 300,
+    timerGoalMs: 30 * MIN,
+    entryMax: 1.3,
+    penalty: 1.3,
+    barMax: 300,
+    barBands: [
+      { id: 'b1', from: 0, to: 15 },
+      { id: 'b2', from: 15, to: 30 },
+      { id: 'b3', from: 30, to: 200 },
+      { id: 'b4', from: 200, to: 300 }
+    ],
+    habits: [
+      { id: 'h1', kind: 'simple', unlock: null },
+      { id: 'h2', kind: 'simple', unlock: { type: 'points', of: 'h1', n: 5 } },
+      { id: 'h3', kind: 'outcome', unlock: { type: 'points', of: 'h2', n: 2 } },
+      { id: 'h4', kind: 'simple', unlock: { type: 'clean', of: 'h3', n: 21 } }
+    ],
+    sections: [
+      { id: 'editing', dry: 5, split: true, subs: [
+        { id: 'ed_hook', cap: 100, mult: 1.0 },
+        { id: 'ed_transitions', cap: 400, mult: 0.7 },
+        { id: 'ed_lighting', cap: 100, mult: 0.7 },
+        { id: 'ed_animation', cap: 500, mult: 1.0 },
+        { id: 'ed_rhythm', cap: 200, mult: 1.0 },
+        { id: 'ed_fitness', cap: 200, mult: 1.0 } ] },
+      { id: 'script', dry: 7, split: false, subs: [
+        { id: 'sc_story', cap: 300, mult: 1.0 },
+        { id: 'sc_coverage', cap: 250, mult: 0.8 },
+        { id: 'sc_order', cap: 300, mult: 0.9 },
+        { id: 'sc_drag', cap: 300, mult: 0.8 },
+        { id: 'sc_hook', cap: 100, mult: 1.0 } ] },
+      { id: 'thumbnail', dry: 7, split: false, subs: [
+        { id: 'th_editing', cap: 200, mult: 1.0 },
+        { id: 'th_mood', cap: 200, mult: 0.9 },
+        { id: 'th_unique', cap: 150, mult: 0.65 } ] },
+      { id: 'topic', dry: 7, split: false, subs: [
+        { id: 'tp_timing', cap: 60, mult: 0.9 },
+        { id: 'tp_audience', cap: 100, mult: 1.0 },
+        { id: 'tp_emotion', cap: 120, mult: 1.0 } ] }
+    ]
+  };
+
+  const pad = n => String(n).padStart(2, '0');
+  const keyOf = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const parseKey = k => { const p = k.split('-').map(Number); return new Date(p[0], p[1] - 1, p[2]); };
+  const addDays = (k, n) => { const d = parseKey(k); d.setDate(d.getDate() + n); return keyOf(d); };
+  const diffDays = (a, b) => Math.round((parseKey(b) - parseKey(a)) / 86400000);
+
+  const validEntry = e => !!e && Number(e.rating) > 0 && String(e.note || '').trim().length > 0;
+  const entryPts = e => Math.min(100, Math.max(0, Number(e.rating))) * CFG.entryMax / 100;
+
+  function h3Net(l) {
+    if (!l) return 0;
+    if (l.penalty) return -2;
+    if (l.reward === 'clean') return 2;
+    if (l.reward === 'exercised') return 0.5;
+    return 0;
+  }
+  function h3Frac(l) {
+    if (!l || l.penalty) return 0;
+    if (l.reward === 'clean') return 1;
+    if (l.reward === 'exercised') return 0.25;
+    return 0;
+  }
+  function barDelta(timerDone, avg) {
+    return (timerDone ? 0.5 : -1) + (avg >= 0.5 - 1e-9 ? 0.5 * avg : -1);
+  }
+  const mean = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : 1;
+
+  function scores(pts) {
+    const out = {};
+    for (const sec of CFG.sections) {
+      const sm = sec.subs.reduce((a, s) => a + s.mult, 0);
+      const sum = sec.subs.reduce((a, s) => a + s.mult * ((pts[s.id] || 0) / s.cap), 0);
+      out[sec.id] = sum / sm * 100;
+    }
+    out.hook = (out.editing + (pts.sc_story || 0) / 300 * 100) / 2;
+    return out;
+  }
+
+  function replay(state, todayKey) {
+    const start = state.startDate || todayKey;
+    const log = state.log || {};
+    const H = {};
+    CFG.habits.forEach(h => { H[h.id] = { id: h.id, active: false, activatedOn: null, points: 0, miss: 0, completed: false, completedOn: null, clean: 0 }; });
+    H.h1.active = true; H.h1.activatedOn = start;
+    const P = {};
+    CFG.sections.forEach(sec => sec.subs.forEach(s => { P[s.id] = { points: 0, dry: 0 }; }));
+    let bar = 0;
+    const barLog = [];
+    let day = start;
+    while (diffDays(day, todayKey) > 0) {
+      const L = log[day] || {};
+      const hl = L.habits || {};
+      const fracs = [];
+      for (const h of CFG.habits) {
+        const s = H[h.id];
+        if (!s.active || s.completed) continue;
+        let frac = 0;
+        if (h.kind === 'simple') {
+          if (hl[h.id] === true) { s.points = Math.min(CFG.habitMax, s.points + 1); s.miss = 0; frac = 1; }
+          else { s.miss++; const pen = Math.min(4, Math.pow(2, s.miss - 1)); s.points = Math.max(0, s.points - pen); }
+        } else {
+          const l = hl[h.id] || {};
+          let delta = -2;
+          if (l.penalty) delta = -2;
+          else if (l.reward === 'clean') { delta = 2; s.clean++; }
+          else if (l.reward === 'exercised') delta = 0.5;
+          frac = h3Frac(l);
+          s.points = Math.max(0, Math.min(CFG.habitMax, s.points + delta));
+        }
+        if (s.points >= CFG.habitMax) { s.points = CFG.habitMax; s.completed = true; s.completedOn = day; }
+        fracs.push(frac);
+      }
+      const timerDone = (L.timerMs || 0) >= CFG.timerGoalMs;
+      const avg = mean(fracs);
+      const delta = barDelta(timerDone, avg);
+      bar = Math.max(0, Math.min(CFG.barMax, bar + delta));
+      barLog.push({ day, delta, timerDone, avg });
+
+      const pl = L.prod || {};
+      for (const sec of CFG.sections) {
+        const any = sec.subs.some(s => validEntry(pl[s.id]));
+        for (const sub of sec.subs) {
+          const e = pl[sub.id]; const p = P[sub.id];
+          if (validEntry(e)) { p.points = Math.min(sub.cap, p.points + entryPts(e)); p.dry = 0; }
+          else {
+            p.dry++;
+            let ded = 0;
+            if (p.dry >= sec.dry) ded += CFG.penalty;
+            if (sec.split && !any) ded += CFG.penalty / sec.subs.length;
+            p.points = Math.max(0, p.points - ded);
+          }
+        }
+      }
+
+      for (const h of CFG.habits) {
+        const s = H[h.id];
+        if (s.active || !h.unlock) continue;
+        const src = H[h.unlock.of];
+        const val = h.unlock.type === 'points' ? src.points : src.clean;
+        if (val >= h.unlock.n) { s.active = true; s.activatedOn = addDays(day, 1); }
+      }
+      day = addDays(day, 1);
+    }
+
+    // today (live preview, not final until midnight)
+    const L = log[todayKey] || {};
+    const hl = L.habits || {};
+    const T = { key: todayKey, habits: {}, prod: {}, timerMs: L.timerMs || 0 };
+    const fr = [];
+    for (const h of CFG.habits) {
+      const s = H[h.id];
+      const t = { active: s.active, completed: s.completed, cleanProjected: s.clean };
+      if (s.active && !s.completed) {
+        if (h.kind === 'simple') {
+          const checked = hl[h.id] === true;
+          t.checked = checked;
+          t.projected = Math.min(CFG.habitMax, s.points + (checked ? 1 : 0));
+          t.skipPenalty = checked ? 0 : Math.min(4, Math.pow(2, s.miss));
+          t.frac = checked ? 1 : 0;
+        } else {
+          const l = hl[h.id] || {};
+          t.state = { reward: l.reward || null, penalty: !!l.penalty };
+          t.logged = !!(l.reward || l.penalty);
+          t.projected = Math.max(0, Math.min(CFG.habitMax, s.points + h3Net(l)));
+          t.skipPenalty = t.logged ? 0 : 2;
+          t.frac = h3Frac(l);
+          t.cleanProjected = s.clean + (l.reward === 'clean' && !l.penalty ? 1 : 0);
+        }
+        fr.push(t.frac);
+      } else t.projected = s.points;
+      T.habits[h.id] = t;
+    }
+    const avgT = mean(fr);
+    const doneT = T.timerMs >= CFG.timerGoalMs;
+    T.bar = { timerDone: doneT, avg: avgT, delta: barDelta(doneT, avgT) };
+    const pl = L.prod || {};
+    const finalPts = {}; const livePts = {};
+    for (const sec of CFG.sections) {
+      const any = sec.subs.some(s => validEntry(pl[s.id]));
+      T.prod[sec.id + '_any'] = any;
+      for (const sub of sec.subs) {
+        const e = pl[sub.id]; const valid = validEntry(e);
+        const gain = valid ? entryPts(e) : 0;
+        const proj = Math.min(sub.cap, P[sub.id].points + gain);
+        T.prod[sub.id] = { valid, entry: valid ? e : null, gain, projected: proj, dry: valid ? 0 : P[sub.id].dry,
+          warn: !valid && (P[sub.id].dry + 1 >= sec.dry), splitWarn: sec.split && !any };
+        finalPts[sub.id] = P[sub.id].points; livePts[sub.id] = proj;
+      }
+    }
+    return { H, P, bar, barLog, today: T, scores: scores(finalPts), liveScores: scores(livePts), start };
+  }
+
+  const api = { CFG, keyOf, parseKey, addDays, diffDays, validEntry, entryPts, replay, scores, barDelta, h3Net };
+  root.Engine = api;
+  if (typeof module !== 'undefined') module.exports = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+(function () {
+  'use strict';
+  const E = window.Engine, CFG = E.CFG;
+  const SKEY = 'habit-ledger-v1', GKEY = 'habit-ledger-gh-v1', UKEY = 'habit-ledger-ui-v1';
+  const $ = (s, r) => (r || document).querySelector(s);
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const clamp = (n, a, b) => Math.max(a, Math.min(b, n));
+  const fmt = n => { const r = Math.round(n * 10) / 10; return Number.isInteger(r) ? String(r) : r.toFixed(1); };
+  const f2 = n => (Math.round(n * 100) / 100).toFixed(2);
+  const today = () => E.keyOf(new Date());
+
+  /* ---------- text (all editable in Settings) ---------- */
+  const URGES = [
+    { id: 'u1', icon: 'bolt', t: 'Debilitating stress', x: 'Hit the daily minimum of 30 minutes of work.\nThen you can take a break.' },
+    { id: 'u2', icon: 'search', t: 'Research urge', x: 'Write the question down in a document.\nHit the daily minimum of 30 minutes of work first.\nIf the urge is still there, you can search it up.' },
+    { id: 'u3', icon: 'rings', t: 'Thinking procrastination', x: 'Open your journal document and write for 5 minutes.\nThen start with something small. Don\u2019t start with \u201ctime to go editing\u201d.\nTell yourself: let me just open After Effects.', wait: 5, waitLabel: 'Journal for 5 minutes' },
+    { id: 'u4', icon: 'phone', t: 'Urge to call', x: 'Do not call first. Do the daily minimum.\nThen do a series of 70 push-ups, or stand up, drink water and walk a little.' },
+    { id: 'u5', icon: 'flame', t: 'Physical urge', x: 'Do a short exercise first: push-ups, a walk or bodyweight work.\nIf the urge is too strong, act on it and come back afterwards.\nTell yourself: let me just open After Effects.' },
+    { id: 'u6', icon: 'ball', t: 'Urge to watch soccer', x: 'Replace it with reading. Even 5 minutes counts.', wait: 5, waitLabel: 'Read for 5 minutes' },
+    { id: 'u7', icon: 'reel', t: 'Urge to watch short-form', x: 'Wait 10 minutes before you do.\nTry solving puzzles.\nIf the urge is too strong, watch for 25 minutes max today.', wait: 10, waitLabel: 'Wait 10 minutes' },
+    { id: 'u8', icon: 'battery', t: 'I don\u2019t feel like it', x: 'Say it out loud:\n\u201cI am the type of person who does his daily work (minimum) and never quits when he doesn\u2019t feel like it.\u201d\nThen do the daily minimum.' },
+    { id: 'u9', icon: 'star', t: 'Instant reward urge', x: 'Do not go doom scrolling or binge watching.\nDo some puzzles, read a little, or watch some YouTube.' }
+  ];
+  const ICONS = {
+    bolt: '<path d="M13 2 4 14h6l-1 8 9-12h-6z"/>',
+    search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="m20 20-4.8-4.8"/>',
+    rings: '<circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.2"/>',
+    phone: '<path d="M5 4h4l2 5-2.5 1.5a11 11 0 0 0 5 5L15 13l5 2v4a2 2 0 0 1-2 2A16 16 0 0 1 3 6a2 2 0 0 1 2-2z"/>',
+    flame: '<path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 .3 1.5 1 2 2 2 0-3-1-5 1-8z"/>',
+    ball: '<circle cx="12" cy="12" r="9"/><path d="m12 8 3.5 2.5-1.3 4H9.8l-1.3-4z"/><path d="M12 3v5M20.5 9.5l-5 1M17.5 19.5l-3.3-5M6.5 19.5l3.3-5M3.5 9.5l5 1"/>',
+    reel: '<rect x="7" y="2" width="10" height="20" rx="2"/><path d="m10.5 9.5 4 2.5-4 2.5z"/>',
+    battery: '<rect x="2" y="7" width="17" height="10" rx="2"/><path d="M22 10v4M5 10v4"/>',
+    star: '<path d="m12 2 2.6 6.4L21 9l-5 4.4L17.5 20 12 16.5 6.5 20 8 13.4 3 9l6.4-.6z"/>'
+  };
+  const LBL = {
+    h1_name: 'Unstructured daily thinking', h1_to: 'Journaling',
+    h2_name: 'Watching soccer', h2_to: 'Reading',
+    h3_name: 'Urge response', h3_to: 'Exercise first',
+    h4_name: 'Short-form', h4_to: 'Puzzles or long-form',
+    h3_clean: 'Clean day', h3_clean_s: 'No urge, or I resisted it',
+    h3_ex: 'Acted after 10 min exercise', h3_ex_s: 'Locks in +0.5',
+    h3_act: 'Acted without exercising', h3_act_s: 'Costs 2 and replaces today\u2019s reward'
+  };
+  URGES.forEach(u => { LBL[u.id + '_t'] = u.t; LBL[u.id + '_x'] = u.x; });
+  const SUBN = { ed_hook: 'Hook', ed_transitions: 'Transitions', ed_lighting: 'Lighting', ed_animation: 'Animation', ed_rhythm: 'Rhythm', ed_fitness: 'Fitness of clips to the section', sc_story: 'Storytelling', sc_coverage: 'Coverage', sc_order: 'Order', sc_drag: 'Drag reduction', sc_hook: 'Hook', th_editing: 'Editing', th_mood: 'Mood', th_unique: 'Uniqueness', tp_timing: 'Timing', tp_audience: 'Audience', tp_emotion: 'Emotional weight' };
+  const SECN = { editing: 'Editing', script: 'Script', thumbnail: 'Thumbnail', topic: 'Topic' };
+  const COMPS = ['MOON', 'SunnyV2', 'Patrick CC', 'Internet Anarchist'];
+  const STATS = [['editing', 'Editing'], ['script', 'Script'], ['hook', 'Hook'], ['thumbnail', 'Thumbnail'], ['topic', 'Topic']];
+  const L = k => (state.labels && state.labels[k]) || LBL[k] || k;
+
+  /* ---------- state ---------- */
+  function emptyState() {
+    const c = {}; COMPS.forEach(n => c[n] = {});
+    return { v: 1, startDate: today(), log: {}, labels: {}, competitors: c, books: [{ id: 'b1', title: 'Animal Farm', total: 0, read: 0 }], timer: { key: today(), acc: 0, since: null }, updatedAt: Date.now() };
+  }
+  function load() { try { const s = JSON.parse(localStorage.getItem(SKEY)); if (s && s.v === 1) { s.log = s.log || {}; s.labels = s.labels || {}; s.competitors = s.competitors || {}; COMPS.forEach(n => s.competitors[n] = s.competitors[n] || {}); s.books = s.books || []; s.timer = s.timer || { key: today(), acc: 0, since: null }; return s; } } catch (e) {} return emptyState(); }
+  let state = load();
+  const ui = { page: 'habits', prodTab: 'overview', drafts: {}, modal: null, settings: false, sync: { status: 'off', msg: 'Sync off' }, wait: null };
+  try { const u = JSON.parse(localStorage.getItem(UKEY)); if (u) { ui.page = u.page || ui.page; ui.prodTab = u.prodTab || ui.prodTab; } } catch (e) {}
+  const saveUI = () => { try { localStorage.setItem(UKEY, JSON.stringify({ page: ui.page, prodTab: ui.prodTab })); } catch (e) {} };
+  const save = () => { try { localStorage.setItem(SKEY, JSON.stringify(state)); } catch (e) {} };
+  const dayLog = k => (state.log[k] = state.log[k] || {});
+  const touch = () => { state.updatedAt = Date.now(); save(); scheduleSync(); };
+
+  /* ---------- timer ---------- */
+  const elapsed = now => state.timer.acc + (state.timer.since ? now - state.timer.since : 0);
+  function rollTimer(now) {
+    const t = state.timer, k = today();
+    if (t.key !== k) {
+      if (t.key) {
+        let ms = t.acc;
+        if (t.since) ms += Math.max(0, E.parseKey(E.addDays(t.key, 1)).getTime() - t.since);
+        const l = dayLog(t.key); l.timerMs = Math.max(l.timerMs || 0, ms);
+      }
+      state.timer = { key: k, acc: 0, since: null };
+      save(); return true;
+    }
+    return false;
+  }
+  function commitTimer(now) { const l = dayLog(today()); l.timerMs = Math.max(l.timerMs || 0, elapsed(now)); }
+  const mmss = ms => { const s = Math.floor(ms / 1000); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+
+  /* ---------- views ---------- */
+  const fmtDate = k => E.parseKey(k).toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  function header() {
+    const tabs = [['habits', 'Habits'], ['prod', 'Production'], ['lod', 'Life or Death']];
+    const s = ui.sync;
+    return `<header class="top"><nav class="tabs">${tabs.map(t => `<button class="tab ${ui.page === t[0] ? 'on' : ''}" data-act="page" data-p="${t[0]}">${t[1]}</button>`).join('')}</nav>
+    <div class="tools"><button class="chip ${s.status}" data-act="sync" title="${esc(s.msg)}"><i></i>${esc(s.status === 'off' ? 'Sync off' : s.status === 'busy' ? 'Syncing' : s.status === 'ok' ? 'Synced' : 'Sync error')}</button><button class="chip" data-act="settings">Settings</button></div></header>`;
+  }
+
+  function unlockText(h, D) {
+    const u = h.unlock, t = D.today.habits[u.of];
+    if (u.type === 'points') { const have = t.projected; return { ready: have >= u.n, text: `Unlocks when ${L(u.of + '_name')} reaches ${u.n} points. Now at ${fmt(have)}.` }; }
+    const have = t.cleanProjected; return { ready: have >= u.n, text: `Unlocks after ${u.n} clean days on ${L(u.of + '_name')}. Now at ${have}.` };
+  }
+
+  function habitSide(id, D, k) {
+    const l = dayLog(k);
+    if (id === 'h1') {
+      const mins = (l.panel && l.panel.j_min) || '';
+      let week = 0; for (let i = 0; i < 7; i++) { const p = (state.log[E.addDays(k, -i)] || {}).panel; if (p && p.j_min) week += Number(p.j_min); }
+      return `<h3>Journal</h3><label class="f" for="jm">Minutes journaled today</label><input id="jm" type="number" min="0" inputmode="numeric" data-panel="j_min" value="${esc(mins)}"><p class="note">${week} minutes in the last 7 days. Start with 5.</p>`;
+    }
+    if (id === 'h2') {
+      const cur = state.books.find(b => !(b.total > 0 && b.read >= b.total));
+      const rows = state.books.map(b => {
+        const done = b.total > 0 && b.read >= b.total, pct = b.total > 0 ? clamp(b.read / b.total * 100, 0, 100) : 0;
+        return `<div class="book ${done ? 'done' : ''}"><strong>${esc(b.title)}</strong>${cur && cur.id === b.id ? ' (reading now)' : ''}${done ? ' (finished)' : ''}
+          <div class="pair"><div><label class="f">Pages read</label><input type="number" min="0" inputmode="numeric" data-book="${b.id}" data-f="read" value="${b.read}"></div>
+          <div><label class="f">Total pages</label><input type="number" min="0" inputmode="numeric" data-book="${b.id}" data-f="total" value="${b.total || ''}" placeholder="Set total"></div></div>
+          <div class="meter"><i style="width:${pct}%"></i></div><p class="note">${b.total > 0 ? `${b.read} of ${b.total} pages (${Math.round(pct)}%)` : 'Enter the total page count.'} <a href="#" data-act="book-del" data-id="${b.id}">remove</a></p></div>`;
+      }).join('');
+      return `<h3>Reading</h3>${rows}<label class="f" for="nb">Add a book</label><div class="pair"><input id="nb" placeholder="Title" data-newbook="title"><input type="number" min="1" inputmode="numeric" placeholder="Total pages" data-newbook="total"></div><p><button class="btn" data-act="book-add">Add book</button></p>`;
+    }
+    if (id === 'h3') {
+      const dots = []; for (let i = 6; i >= 0; i--) {
+        const kk = E.addDays(k, -i), s = state.log[kk] && state.log[kk].habits && state.log[kk].habits.h3;
+        const r = !s ? 'none' : s.penalty ? 'act' : s.reward === 'clean' ? 'clean' : s.reward === 'exercised' ? 'ex' : 'none';
+        dots.push(`<span class="dot ${r}" title="${kk}">${E.parseKey(kk).getDate()}</span>`);
+      }
+      const t = D.today.habits.h3;
+      return `<h3>Last 7 days</h3><div class="dots">${dots.join('')}</div><p class="note">Green clean, yellow acted after exercise, red acted without. Clean days toward ${L('h4_name')}: ${t.cleanProjected} of 21.</p>`;
+    }
+    const note = (l.panel && l.panel.h4_note) || '';
+    const prev = Object.keys(state.log).sort().reverse().filter(d => d !== k && state.log[d].panel && state.log[d].panel.h4_note).slice(0, 4);
+    return `<h3>What I did instead</h3><label class="f" for="h4n">Puzzle or long-form, today</label><textarea id="h4n" data-panel="h4_note" placeholder="e.g. 20 min puzzles, one video essay">${esc(note)}</textarea>${prev.length ? `<p class="hist note">${prev.map(d => esc(d.slice(5)) + ': ' + esc(state.log[d].panel.h4_note)).join('<br>')}</p>` : ''}`;
+  }
+
+  function habitRow(h, i, D, k) {
+    const s = D.H[h.id], t = D.today.habits[h.id];
+    const title = `<h2><span class="idx">${i + 1}</span>${esc(L(h.id + '_name'))} <span class="to">to ${esc(L(h.id + '_to'))}</span></h2>`;
+    if (!s.active) { const u = unlockText(h, D); return `<article class="row locked">${title}<p class="note">Locked. ${esc(u.text)}${u.ready ? ' Unlocks at midnight.' : ''}</p></article>`; }
+    const pct = clamp(t.projected / 300 * 100, 0, 100);
+    let zone;
+    if (s.completed) zone = `<p class="status ok">Completed at 300 points.</p>`;
+    else if (h.kind === 'simple') {
+      zone = `<button class="btn big ${t.checked ? 'on' : ''}" data-act="h" data-h="${h.id}">${t.checked ? 'Done today. Tap to undo' : 'Mark done today'}</button>
+      <p class="note ${t.checked ? '' : 'warn'}">${t.checked ? '+1 counted.' : `Skip today and you lose ${t.skipPenalty} at midnight.`}</p>`;
+    } else {
+      const st = t.state, locked = !!st.reward || st.penalty;
+      const b = (v, cls, lab, dis) => `<button class="btn big ${cls}" data-act="h3" data-v="${v}" ${dis ? 'disabled' : ''}>${esc(L('h3_' + lab))}<small>${esc(L('h3_' + lab + '_s'))}</small></button>`;
+      zone = `<div class="stack">${b('clean', st.reward === 'clean' && !st.penalty ? 'on' : '', 'clean', locked)}${b('exercised', st.reward === 'exercised' && !st.penalty ? 'on' : '', 'ex', locked)}${b('act', st.penalty ? 'on' : '', 'act', st.penalty)}</div>
+      <p class="note ${t.logged ? '' : 'warn'}">${st.penalty ? 'Penalty applied: the day ends 2 below where it started.' : st.reward ? 'Reward locked in. Only the penalty button can still change today.' : `Press nothing today and you lose 2 at midnight.`}</p>`;
+    }
+    return `<article class="row"><div class="hgrid"><div>${title}<div class="score"><b>${fmt(t.projected)}</b><span>of 300</span><em>${Math.round(pct)}%</em></div><div class="meter"><i style="width:${pct}%"></i></div>${zone}</div><aside class="side">${habitSide(h.id, D, k)}</aside></div></article>`;
+  }
+
+  function habitsPage(D, k) {
+    const dayN = E.diffDays(state.startDate, k) + 1;
+    return `<h1 class="title">Habits</h1><div class="dateline"><span>${fmtDate(k)}</span><span>Day ${dayN}</span></div>${CFG.habits.map((h, i) => habitRow(h, i, D, k)).join('')}`;
+  }
+
+  function subHistory(id) {
+    const out = []; const keys = Object.keys(state.log).sort().reverse();
+    for (const d of keys) { const e = state.log[d].prod && state.log[d].prod[id]; if (E.validEntry(e)) out.push(`${d.slice(5)}: ${e.rating}/100, ${esc(e.note)}`); if (out.length >= 3) break; }
+    return out.length ? `<p class="hist">${out.join('<br>')}</p>` : '';
+  }
+  function subRow(sec, sub, D) {
+    const t = D.today.prod[sub.id], pct = clamp(t.projected / sub.cap * 100, 0, 100), dr = D.draft || {};
+    const d = ui.drafts[sub.id] || { rating: '', note: '' };
+    let status;
+    if (t.valid) status = `<p class="note">Added today: ${t.entry.rating}/100 for +${f2(t.gain)}. ${esc(t.entry.note)}</p>`;
+    else status = `<p class="note ${t.warn ? 'warn' : ''}">${t.dry} day${t.dry === 1 ? '' : 's'} without an entry. ${t.warn ? `Add one today or lose ${CFG.penalty} at midnight.` : `Loses ${CFG.penalty} per day once it reaches ${sec.dry}.`}</p>`;
+    const pv = d.rating ? '+' + f2(clamp(Number(d.rating) || 0, 0, 100) * CFG.entryMax / 100) : '+0.00';
+    const form = t.valid ? '' : `<div class="pair"><div><label class="f" for="r-${sub.id}">Today\u2019s rating (1 to 100)</label><input id="r-${sub.id}" type="number" min="1" max="100" inputmode="numeric" data-draft="${sub.id}" data-f="rating" value="${esc(d.rating)}"></div>
+      <div><label class="f" for="n-${sub.id}">What I did or learned</label><input id="n-${sub.id}" data-draft="${sub.id}" data-f="note" value="${esc(d.note)}"></div></div>
+      <p><button class="btn" data-act="prod-add" data-s="${sub.id}">Add entry (<span id="pv-${sub.id}">${pv}</span>)</button></p>`;
+    return `<div class="sub"><h3>${esc(SUBN[sub.id])}<span>x${sub.mult}</span></h3><div class="score" style="margin-top:6px"><b style="font-size:38px">${fmt(t.projected)}</b><span>of ${sub.cap}</span><em>${Math.round(pct)}%</em></div><div class="meter"><i style="width:${pct}%"></i></div>${status}${form}${subHistory(sub.id)}</div>`;
+  }
+
+  function prodPage(D, k) {
+    const tabs = [['overview', 'Overview']].concat(CFG.sections.map(s => [s.id, SECN[s.id]]));
+    let body;
+    if (ui.prodTab === 'overview') {
+      body = STATS.map(([id, name]) => {
+        const you = Math.round(D.liveScores[id] * 10) / 10;
+        const rows = COMPS.map(c => { const v = state.competitors[c][id]; return `<div class="cmp"><span class="who">${esc(c)}</span><div class="meter"><i style="width:${clamp(Number(v) || 0, 0, 100)}%"></i></div><input type="number" min="0" max="100" inputmode="numeric" aria-label="${esc(c)} ${name}" data-comp="${esc(c)}" data-stat="${id}" value="${v === undefined ? '' : v}" placeholder="0"></div>`; }).join('');
+        return `<section class="stat"><h2>${name}</h2><div class="cmp you"><span class="who">You</span><div class="meter"><i style="width:${clamp(you, 0, 100)}%"></i></div><b>${fmt(you)}</b></div>${rows}</section>`;
+      }).join('') + `<p class="note">Hook is the average of your Editing score and Script storytelling. Type each creator\u2019s rating (0 to 100) in their row.</p>`;
+    } else {
+      const sec = CFG.sections.find(s => s.id === ui.prodTab);
+      const warn = sec.split && !D.today.prod[sec.id + '_any'] ? `<p class="note warn">No ${SECN[sec.id].toLowerCase()} entry yet today. Midnight takes ${f2(CFG.penalty / sec.subs.length)} from every sub-section.</p>` : '';
+      body = `<div class="big-n"><b>${fmt(D.liveScores[sec.id])}</b><span class="note">out of 100, weighted by each sub-section\u2019s multiplier</span></div>${warn}${sec.subs.map(s => subRow(sec, s, D)).join('')}`;
+    }
+    return `<h1 class="title">Production</h1><div class="subtabs">${tabs.map(t => `<button class="btn ${ui.prodTab === t[0] ? 'on' : ''}" data-act="ptab" data-t="${t[0]}">${t[1]}</button>`).join('')}</div>${body}`;
+  }
+
+  function lodPage(D, k) {
+    const bar = D.bar, T = D.today;
+    const band = CFG.barBands.find(b => bar < b.to) || CFG.barBands[CFG.barBands.length - 1];
+    const marks = [15, 30, 200].map(v => `<i class="mk" style="left:${v / 3}%"></i>`).join('');
+    const ticks = [0, 15, 30, 200, 300].map(v => `<span style="left:${v / 3}%">${v}</span>`).join('');
+    const hp = T.bar.avg >= 0.5 - 1e-9 ? '+' + f2(0.5 * T.bar.avg) : '\u22121';
+    const dl = T.bar.delta, sign = dl >= 0 ? '+' : '\u2212';
+    const tiles = URGES.map(u => `<button class="tile" data-act="urge" data-u="${u.id}"><svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[u.icon]}</svg><span>${esc(L(u.id + '_t'))}</span></button>`).join('');
+    return `<h1 class="title">Life or Death</h1>
+    <div class="big-n"><b>${fmt(bar)}</b><span class="note">of 300 points, ${Math.round(bar / 3)}% of the person you are becoming</span></div>
+    <div class="lod" role="img" aria-label="Life or Death bar at ${fmt(bar)} of 300"><div class="fill ${band.id}" style="width:${bar / 3}%"></div>${marks}</div><div class="ticks">${ticks}</div>
+    <p class="note">If today ended now: timer ${T.bar.timerDone ? '+0.5' : '\u22121'}, habits at ${Math.round(T.bar.avg * 100)}% (${hp}), total ${sign}${f2(Math.abs(dl))}. Counted at midnight.</p>
+    <div class="timer"><div class="clock" id="clock">00:00</div><div><div class="status" id="tstatus"></div><p class="note" id="tnote"></p></div><div class="stack"><button class="btn" id="tbtn" data-act="timer"></button></div></div>
+    <h2 style="font-stretch:75%;font-weight:800;font-size:27px;margin:8px 0 6px">What are you feeling?</h2><div class="tiles">${tiles}</div>`;
+  }
+
+  function modal(D) {
+    if (!ui.modal) return '';
+    const u = URGES.find(x => x.id === ui.modal);
+    const done = D.today.timerMs >= CFG.timerGoalMs;
+    const paras = L(u.id + '_x').split('\n').filter(Boolean).map(p => `<p>${esc(p)}</p>`).join('');
+    const wait = u.wait ? `<div class="waitbox"><b id="waitclock">${String(u.wait).padStart(2, '0')}:00</b><button class="btn" data-act="wait" data-m="${u.wait}" id="waitbtn">Start: ${esc(u.waitLabel)}</button></div>` : '';
+    return `<div class="veil" data-act="veil"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(L(u.id + '_t'))}"><button class="btn x" data-act="close">Close</button><h2>${esc(L(u.id + '_t'))}</h2>
+    <span class="badge ${done ? 'ok' : 'no'}">${done ? 'Minimum done. Break unlocked.' : 'Minimum not done.'}</span>${paras}${wait}</div></div>`;
+  }
+
+  function settingsSheet() {
+    if (!ui.settings) return '';
+    const g = getGH() || {};
+    const inp = (k, ph) => `<label class="f">${ph}</label><input data-label="${k}" value="${esc(state.labels[k] || '')}" placeholder="${esc(LBL[k])}">`;
+    const habits = ['h1', 'h2', 'h3', 'h4'].map(h => `<div class="pair"><div>${inp(h + '_name', 'Habit ' + h.slice(1) + ' to change')}</div><div>${inp(h + '_to', 'Replace with')}</div></div>`).join('') +
+      ['h3_clean', 'h3_clean_s', 'h3_ex', 'h3_ex_s', 'h3_act', 'h3_act_s'].map(k => inp(k, 'Habit 3 button text (' + k.replace('h3_', '') + ')')).join('');
+    const urges = URGES.map(u => `<label class="f">Urge title</label><input data-label="${u.id}_t" value="${esc(state.labels[u.id + '_t'] || '')}" placeholder="${esc(u.t)}"><label class="f">What to do instead (one step per line)</label><textarea data-label="${u.id}_x" placeholder="${esc(u.x)}">${esc(state.labels[u.id + '_x'] || '')}</textarea>`).join('');
+    return `<div class="veil" data-act="veil-s"><div class="sheet cfg" role="dialog" aria-modal="true" aria-label="Settings"><button class="btn x" data-act="close-s">Close</button><h2>Settings</h2>
+    <h3>Start date</h3><p>Days from this date are scored. Changing it recalculates everything.</p><input type="date" data-start value="${esc(state.startDate)}" max="${today()}">
+    <h3>GitHub sync</h3><p>Stores your data in a private repo so your phone and computer share it. Use a fine-grained token with Contents read and write on that one repo. The token stays on this device only.</p>
+    <div class="pair"><div><label class="f">Owner</label><input data-gh="owner" value="${esc(g.owner || '')}" autocomplete="off"></div><div><label class="f">Repository</label><input data-gh="repo" value="${esc(g.repo || '')}" autocomplete="off"></div></div>
+    <div class="pair"><div><label class="f">Branch</label><input data-gh="branch" value="${esc(g.branch || 'main')}"></div><div><label class="f">File path</label><input data-gh="path" value="${esc(g.path || 'data.json')}"></div></div>
+    <label class="f">Token</label><input type="password" data-gh="token" value="${esc(g.token || '')}" autocomplete="off"><p><button class="btn" data-act="gh-save">Save and sync now</button> <button class="btn" data-act="gh-clear">Remove sync</button></p><p class="note" id="syncmsg">${esc(ui.sync.msg)}</p>
+    <h3>Backup</h3><p><button class="btn" data-act="export">Download backup</button> <label class="btn" style="display:inline-block">Restore from file<input type="file" accept="application/json" data-import style="display:none"></label></p>
+    <h3>Habit names</h3>${habits}<h3>Urges</h3>${urges}
+    <h3>Reset</h3><p>Deletes everything on this device. Synced data in GitHub stays until you delete it there.</p><button class="btn" data-act="reset">Delete all data on this device</button></div></div>`;
+  }
+
+  let D = null;
+  function render() {
+    rollTimer(Date.now());
+    const k = today();
+    D = E.replay(state, k);
+    const page = ui.page === 'habits' ? habitsPage(D, k) : ui.page === 'prod' ? prodPage(D, k) : lodPage(D, k);
+    $('#app').innerHTML = `<div class="wrap">${header()}${page}</div>${modal(D)}${settingsSheet()}`;
+    tick(true);
+  }
+
+  /* ---------- ticking ---------- */
+  let lastCommit = 0, wasDone = null;
+  function tick(skipRoll) {
+    const now = Date.now();
+    if (!skipRoll && rollTimer(now)) { render(); return; }
+    const el = elapsed(now), done = el >= CFG.timerGoalMs;
+    const c = $('#clock');
+    if (c) {
+      c.textContent = mmss(Math.min(el, 99 * 3600000)) + ' / 30:00';
+      const run = !!state.timer.since;
+      $('#tstatus').textContent = done ? 'Minimum done. Break unlocked.' : 'Minimum not done.';
+      $('#tstatus').className = 'status ' + (done ? 'ok' : 'no');
+      $('#tnote').textContent = run ? 'Running. Pause it when you stop working.' : (el > 0 ? 'Paused. Time adds up across sessions today.' : 'Start it when you begin working.');
+      const b = $('#tbtn'); b.textContent = run ? 'Pause' : (el > 0 ? 'Resume' : 'Start timer');
+    }
+    if (state.timer.since && now - lastCommit > 15000) { commitTimer(now); save(); lastCommit = now; }
+    const wasD = (dayLog(today()).timerMs || 0) >= CFG.timerGoalMs;
+    if (done && !wasD) { commitTimer(now); touch(); render(); return; }
+    if (ui.wait) {
+      const left = Math.max(0, ui.wait.end - now), wc = $('#waitclock');
+      if (wc) wc.textContent = mmss(left);
+      if (left <= 0) { const wb = $('#waitbtn'); if (wb) wb.textContent = 'Time is up. Nice work.'; ui.wait = null; }
+    }
+  }
+  setInterval(() => tick(false), 1000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) { tick(false); } });
+
+  /* ---------- actions ---------- */
+  document.addEventListener('click', e => {
+    const el = e.target.closest('[data-act]');
+    if (!el) return;
+    const a = el.dataset.act, k = today();
+    if (a === 'veil') { if (e.target === el) { ui.modal = null; ui.wait = null; render(); } return; }
+    if (a === 'veil-s') { if (e.target === el) closeSettings(); return; }
+    if (el.tagName === 'A') e.preventDefault();
+    if (a === 'page') { ui.page = el.dataset.p; saveUI(); render(); window.scrollTo(0, 0); }
+    else if (a === 'ptab') { ui.prodTab = el.dataset.t; saveUI(); render(); }
+    else if (a === 'h') {
+      const hl = (dayLog(k).habits = dayLog(k).habits || {}), id = el.dataset.h;
+      if (hl[id] === true) delete hl[id]; else hl[id] = true;
+      touch(); render();
+    } else if (a === 'h3') {
+      const hl = (dayLog(k).habits = dayLog(k).habits || {}), cur = hl.h3 || {}, v = el.dataset.v;
+      if (v === 'act') {
+        if (cur.penalty) return;
+        if (!confirm('Acted without exercising: this costs 2 and reverses any reward you already locked in today. Confirm?')) return;
+        hl.h3 = { reward: cur.reward || null, penalty: true };
+      } else {
+        if (cur.reward || cur.penalty) return;
+        if (!confirm((v === 'clean' ? 'Clean day (+2)' : 'Acted after 10 min exercise (+0.5)') + ': this locks in today\u2019s reward. Confirm?')) return;
+        hl.h3 = { reward: v, penalty: false };
+      }
+      touch(); render();
+    } else if (a === 'prod-add') {
+      const id = el.dataset.s, d = ui.drafts[id] || {}, r = Math.round(Number(d.rating)), note = String(d.note || '').trim();
+      if (!(r >= 1 && r <= 100)) { alert('Enter a rating from 1 to 100.'); return; }
+      if (!note) { alert('Add a one-line note on what you did or learned.'); return; }
+      const pl = (dayLog(k).prod = dayLog(k).prod || {});
+      if (pl[id]) return;
+      pl[id] = { rating: r, note, at: Date.now() };
+      delete ui.drafts[id]; touch(); render();
+    } else if (a === 'timer') {
+      const now = Date.now(), t = state.timer;
+      if (t.since) { t.acc += now - t.since; t.since = null; commitTimer(now); } else { t.since = now; lastCommit = now; }
+      touch(); render();
+    } else if (a === 'urge') { ui.modal = el.dataset.u; ui.wait = null; render(); }
+    else if (a === 'close') { ui.modal = null; ui.wait = null; render(); }
+    else if (a === 'wait') { ui.wait = { end: Date.now() + Number(el.dataset.m) * 60000 }; el.textContent = 'Counting down. Stay with it.'; tick(true); }
+    else if (a === 'book-add') {
+      const t = $('[data-newbook=title]').value.trim(), n = Math.round(Number($('[data-newbook=total]').value));
+      if (!t) return;
+      state.books.push({ id: 'b' + Date.now(), title: t, total: n > 0 ? n : 0, read: 0 }); touch(); render();
+    } else if (a === 'book-del') { if (confirm('Remove this book?')) { state.books = state.books.filter(b => b.id !== el.dataset.id); touch(); render(); } }
+    else if (a === 'settings') { ui.settings = true; render(); }
+    else if (a === 'close-s') closeSettings();
+    else if (a === 'sync') { if (getGH()) syncNow(); else { ui.settings = true; render(); } }
+    else if (a === 'gh-save') { saveGH(); syncNow(); }
+    else if (a === 'gh-clear') { localStorage.removeItem(GKEY); setSync('off', 'Sync off'); render(); }
+    else if (a === 'export') exportJSON();
+    else if (a === 'reset') {
+      if (confirm('Delete all data on this device?') && confirm('This cannot be undone. Delete everything?')) { localStorage.removeItem(SKEY); state = emptyState(); save(); ui.settings = false; ui.modal = null; render(); }
+    }
+  });
+  function closeSettings() { ui.settings = false; touch(); render(); }
+
+  document.addEventListener('input', e => {
+    const t = e.target;
+    if (t.dataset.draft) { const d = (ui.drafts[t.dataset.draft] = ui.drafts[t.dataset.draft] || { rating: '', note: '' }); d[t.dataset.f] = t.value; if (t.dataset.f === 'rating') { const pv = $('#pv-' + t.dataset.draft); if (pv) pv.textContent = '+' + f2(clamp(Number(t.value) || 0, 0, 100) * CFG.entryMax / 100); } }
+  });
+  document.addEventListener('change', e => {
+    const t = e.target, k = today();
+    if (t.dataset.panel) { const l = dayLog(k); l.panel = l.panel || {}; if (t.value) l.panel[t.dataset.panel] = t.value; else delete l.panel[t.dataset.panel]; touch(); if (ui.page === 'habits') render(); }
+    else if (t.dataset.book) { const b = state.books.find(x => x.id === t.dataset.book); if (b) { b[t.dataset.f] = Math.max(0, Math.round(Number(t.value) || 0)); touch(); render(); } }
+    else if (t.dataset.comp) { const v = t.value === '' ? undefined : clamp(Math.round(Number(t.value)), 0, 100); const c = state.competitors[t.dataset.comp]; if (v === undefined) delete c[t.dataset.stat]; else c[t.dataset.stat] = v; touch(); render(); }
+    else if (t.dataset.label) { const v = t.value.trim(); if (v) state.labels[t.dataset.label] = v; else delete state.labels[t.dataset.label]; touch(); }
+    else if (t.dataset.start !== undefined) { if (t.value && t.value <= today()) { state.startDate = t.value; touch(); } else t.value = state.startDate; }
+    else if (t.dataset.gh) { /* saved with the button */ }
+    else if (t.dataset.import !== undefined) importJSON(t.files && t.files[0]);
+  });
+
+  /* ---------- backup ---------- */
+  function payload() { const p = JSON.parse(JSON.stringify(state)); delete p.timer; return p; }
+  function exportJSON() {
+    commitTimer(Date.now());
+    const blob = new Blob([JSON.stringify(payload(), null, 2)], { type: 'application/json' });
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'habit-ledger-' + today() + '.json'; document.body.appendChild(a); a.click(); a.remove();
+  }
+  function importJSON(f) {
+    if (!f) return;
+    const r = new FileReader();
+    r.onload = () => { try { const d = JSON.parse(r.result); if (!d || d.v !== 1) throw new Error('bad file'); if (!confirm('Merge this backup into your data?')) return; state = merge(state, d); touch(); render(); } catch (err) { alert('That file is not a valid backup.'); } };
+    r.readAsText(f);
+  }
+
+  /* ---------- sync ---------- */
+  const getGH = () => { try { const g = JSON.parse(localStorage.getItem(GKEY)); return g && g.token && g.owner && g.repo ? g : null; } catch (e) { return null; } };
+  function saveGH() {
+    const g = {}; document.querySelectorAll('[data-gh]').forEach(i => g[i.dataset.gh] = i.value.trim());
+    g.branch = g.branch || 'main'; g.path = g.path || 'data.json';
+    localStorage.setItem(GKEY, JSON.stringify(g));
+  }
+  function setSync(status, msg) { ui.sync = { status, msg }; const c = $('.chip[data-act=sync]'); if (c) { c.className = 'chip ' + status; c.innerHTML = '<i></i>' + (status === 'off' ? 'Sync off' : status === 'busy' ? 'Syncing' : status === 'ok' ? 'Synced' : 'Sync error'); c.title = msg; } const m = $('#syncmsg'); if (m) m.textContent = msg; }
+  const b64e = s => { const b = new TextEncoder().encode(s); let bin = ''; for (let i = 0; i < b.length; i += 0x8000) bin += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000)); return btoa(bin); };
+  const b64d = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, '')), c => c.charCodeAt(0)));
+  const ghUrl = g => `https://api.github.com/repos/${encodeURIComponent(g.owner)}/${encodeURIComponent(g.repo)}/contents/${g.path.split('/').map(encodeURIComponent).join('/')}`;
+  const ghHead = g => ({ Authorization: 'Bearer ' + g.token, Accept: 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' });
+  async function ghGet(g) {
+    const r = await fetch(ghUrl(g) + '?ref=' + encodeURIComponent(g.branch) + '&t=' + Date.now(), { headers: ghHead(g), cache: 'no-store' });
+    if (r.status === 404) return { sha: null, data: null };
+    if (!r.ok) throw new Error(r.status === 401 ? 'Token rejected (401)' : 'GitHub error ' + r.status);
+    const j = await r.json(); return { sha: j.sha, data: JSON.parse(b64d(j.content)) };
+  }
+  async function ghPut(g, data, sha) {
+    const body = { message: 'sync ' + new Date().toISOString(), content: b64e(JSON.stringify(data)), branch: g.branch }; if (sha) body.sha = sha;
+    const r = await fetch(ghUrl(g), { method: 'PUT', headers: Object.assign({ 'Content-Type': 'application/json' }, ghHead(g)), body: JSON.stringify(body) });
+    return { ok: r.ok, status: r.status };
+  }
+  const canon = o => JSON.stringify(o, (k, v) => (v && typeof v === 'object' && !Array.isArray(v)) ? Object.keys(v).sort().reduce((a, x) => (a[x] = v[x], a), {}) : v);
+  function merge(a, b) {
+    const out = JSON.parse(JSON.stringify(a));
+    const hasData = Object.keys(a.log || {}).length > 0;
+    out.startDate = !hasData && b.startDate ? b.startDate : (b.startDate && b.startDate < a.startDate ? b.startDate : a.startDate);
+    out.log = out.log || {};
+    for (const d of Object.keys(b.log || {})) {
+      const x = (out.log[d] = out.log[d] || {}), y = b.log[d];
+      x.habits = x.habits || {};
+      for (const [k, v] of Object.entries(y.habits || {})) {
+        if (k === 'h3') { const c = x.habits.h3 || {}; x.habits.h3 = { reward: c.reward || v.reward || null, penalty: !!(c.penalty || v.penalty) }; }
+        else if (v === true) x.habits[k] = true;
+      }
+      x.prod = x.prod || {}; for (const [k, v] of Object.entries(y.prod || {})) if (!x.prod[k]) x.prod[k] = v;
+      if (y.timerMs || x.timerMs) x.timerMs = Math.max(x.timerMs || 0, y.timerMs || 0);
+      x.panel = Object.assign({}, y.panel || {}, x.panel || {});
+    }
+    out.labels = Object.assign({}, b.labels || {}, a.labels || {});
+    for (const n of Object.keys(b.competitors || {})) { out.competitors[n] = Object.assign({}, b.competitors[n], out.competitors[n] || {}); }
+    const books = {}; (b.books || []).forEach(x => books[x.id] = x); (a.books || []).forEach(x => { const o = books[x.id]; books[x.id] = o ? Object.assign({}, o, x, { read: Math.max(o.read || 0, x.read || 0), total: x.total || o.total }) : x; });
+    out.books = Object.values(books);
+    out.updatedAt = Math.max(a.updatedAt || 0, b.updatedAt || 0);
+    return out;
+  }
+  let syncing = false, syncTimer = null;
+  function scheduleSync() { if (!getGH()) return; clearTimeout(syncTimer); syncTimer = setTimeout(syncNow, 2500); }
+  async function syncNow() {
+    const g = getGH(); if (!g) { setSync('off', 'Sync off'); return; }
+    if (syncing) return; syncing = true; setSync('busy', 'Syncing');
+    try {
+      commitTimer(Date.now());
+      let ok = false;
+      for (let i = 0; i < 3 && !ok; i++) {
+        const r = await ghGet(g);
+        if (r.data) state = merge(state, r.data);
+        save();
+        const mine = payload();
+        if (r.data && canon(Object.assign({}, mine, { updatedAt: 0 })) === canon(Object.assign({}, r.data, { updatedAt: 0 }))) { ok = true; break; }
+        const res = await ghPut(g, mine, r.sha);
+        if (res.ok) ok = true; else if (res.status !== 409 && res.status !== 422) throw new Error('GitHub error ' + res.status);
+      }
+      if (!ok) throw new Error('Could not save after 3 tries');
+      setSync('ok', 'Synced at ' + new Date().toLocaleTimeString());
+      if (!ui.settings) render();
+    } catch (e) { setSync('err', String(e.message || e)); }
+    syncing = false;
+  }
+
+  render();
+  if (getGH()) syncNow();
+})();
+
+</script>
+</body>
+</html>
